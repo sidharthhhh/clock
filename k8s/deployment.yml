@@ -1,0 +1,34 @@
+# Specifies the API version for the Deployment object.
+apiVersion: apps/v1
+# Specifies the kind of object, which is a Deployment.
+kind: Deployment
+# Metadata for the Deployment, including its name.
+metadata:
+  name: web-app-deployment
+# The specification for the Deployment's desired state.
+spec:
+  # The number of desired Pod replicas.
+  replicas: 2
+  # The selector to identify which Pods this Deployment manages.
+  selector:
+    matchLabels:
+      app: my-web-app
+  # The template for the Pods that will be created.
+  template:
+    metadata:
+      # Labels applied to each Pod created from this template.
+      labels:
+        app: my-web-app
+    spec:
+      # The list of containers to run in the Pod.
+      containers:
+      - name: nginx-web-container
+        # The Docker image to use for the container.
+        # This should be the name of the image you build locally within Minikube.
+        image: my-web-app:latest
+        # This policy tells Kubernetes not to pull the image from a remote registry,
+        # ensuring it uses the local image you built inside Minikube.
+        imagePullPolicy: Never
+        # The port the container exposes.
+        ports:
+        - containerPort: 80

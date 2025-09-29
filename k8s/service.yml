@@ -1,0 +1,23 @@
+# Specifies the API version for the Service object.
+apiVersion: v1
+# Specifies the kind of object, which is a Service.
+kind: Service
+# Metadata for the Service, including its name.
+metadata:
+  name: web-app-service
+# The specification for the Service.
+spec:
+  # The type of Service. NodePort exposes the service on each Node's IP at a static port.
+  type: NodePort
+  # The selector to identify which Pods will receive traffic from this Service.
+  # This must match the labels on the Pods from your Deployment.
+  selector:
+    app: my-web-app
+  # The list of port mappings for this Service.
+  ports:
+    # The protocol for the port mapping.
+  - protocol: TCP
+    # The port on which this Service is exposed.
+    port: 80
+    # The port on the Pods to which traffic should be forwarded.
+    targetPort: 80
