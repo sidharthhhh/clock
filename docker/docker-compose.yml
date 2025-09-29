@@ -1,0 +1,11 @@
+services:
+  web:
+    build:
+      # Use the parent directory (your project root) as the build context
+      context: ..
+      # Specify the path to the Dockerfile relative to the context
+      dockerfile: docker/Dockerfile
+    container_name: clock_app
+    ports:
+      - "8080:80"
+    restart: unless-stopped
