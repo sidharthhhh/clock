@@ -1,0 +1,101 @@
+# --- 1. Permissions for Prometheus (ClusterRole, ServiceAccount, ClusterRoleBinding) ---
+# This gives Prometheus the necessary permissions to read metrics from Kubernetes components.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: default
+---
+# --- 2. Prometheus Configuration (ConfigMap) ---
+# This ConfigMap holds the configuration file that tells Prometheus what to monitor.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |-
+    global:
+      scrape_interval: 1s
+    scrape_configs:
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          # This rule tells Prometheus to only scrape pods that have the
+          # annotation 'prometheus.io/scrape: true'. You can add this
+          # annotation to your web-app-deployment.yml file.
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+---
+# --- 3. Prometheus Application (Deployment) ---
+# This deployment runs the actual Prometheus server pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/prometheus
+      volumes:
+        - name: config-volume
+          configMap:
+            name: prometheus-config
+---
+# --- 4. Prometheus Network Access (Service) ---
+# This service makes Prometheus available to Grafana and lets you access its UI.
+# The name 'prometheus-service' is important because Grafana is configured to look for it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+spec:
+  type: NodePort
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090

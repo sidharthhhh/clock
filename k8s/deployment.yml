@@ -7,7 +7,8 @@ metadata:
   name: web-app-deployment
 # The specification for the Deployment's desired state.
 spec:
-  # The number of desired Pod replicas.
+  # --- THIS IS THE CHANGE ---
+  # The number of desired Pod replicas. We are scaling from 2 to 5.
   replicas: 2
   # The selector to identify which Pods this Deployment manages.
   selector:
@@ -16,6 +17,10 @@ spec:
   # The template for the Pods that will be created.
   template:
     metadata:
+      # These annotations tell Prometheus to find and scrape this pod.
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
       # Labels applied to each Pod created from this template.
       labels:
         app: my-web-app
@@ -24,11 +29,26 @@ spec:
       containers:
       - name: nginx-web-container
         # The Docker image to use for the container.
-        # This should be the name of the image you build locally within Minikube.
         image: my-web-app:latest
-        # This policy tells Kubernetes not to pull the image from a remote registry,
-        # ensuring it uses the local image you built inside Minikube.
+        # This policy tells Kubernetes not to pull the image from a remote registry.
         imagePullPolicy: Never
         # The port the container exposes.
         ports:
         - containerPort: 80
+        # Mount the custom Nginx config from the ConfigMap
+        volumeMounts:
+        - name: nginx-config-volume
+          mountPath: /etc/nginx/conf.d
+      # This is the sidecar container that exports Nginx metrics.
+      - name: nginx-exporter
+        image: nginx/nginx-prometheus-exporter:latest
+        args:
+        - -nginx.scrape-uri=http://127.0.0.1/stub_status
+        ports:
+        - containerPort: 9113
+      # This volume makes the ConfigMap available to the pod
+      volumes:
+      - name: nginx-config-volume
+        configMap:
+          name: nginx-config
+
